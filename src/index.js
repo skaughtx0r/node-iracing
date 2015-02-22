@@ -1,55 +1,44 @@
-require('coffee-script');
 var yaml = require('js-yaml');
+var iracing = require('../build/Release/iracing.node')();
+var tickInterval = null
+var dataInterval = null;
+var TIMEOUT = 1000;
+var DATATIMEOUT = 0;
+var initialized = false;
 
-// Load the C++ bindings
-var iRacing = require('../build/Release/iracing.node').iRacing;
+var driverInfo = {};
 
-// Time between data ticks in ms
-iRacing.TIMEOUT = 60;
+var tick = function() {
+	if(iracing.waitForDataReady(60)) {
+		sessionData = yaml.load(iracing.getSessionYAML());
+		if(!initialized) {
+			initialized = true;
+			driverInfo = parseDrivers(sessionData.DriverInfo);
+			dataInterval = setInterval(dataTick, DATATIMEOUT);
+		};
+	}
+	else {
+		initialized = false;
+		if(dataInterval) { 
+			clearInterval(dataInterval);
+			dataInterval = null;
+		}
+	}
+}
 
-// Our various modules
-iRacing.SessionManager = require("./sessionmanager");
-iRacing.prototype.sessions = iRacing.SessionManager;
+var dataTick = function() {
+	if(!initialized) return;
+	
+	var carIdx = iracing.getTelemetry("CamCarIdx");
+}
 
-iRacing.CarManager = require("./carmanager");
-iRacing.prototype.cars = iRacing.CarManager;
+var parseDrivers = function(dInfo) {
+	dInfo.DriversByIndex = {};
+	for(var i = 0; i < dInfo.Drivers.length; i++) {
+		dInfo.DriversByIndex[dInfo.Drivers[i].CarIdx] = dInfo.Drivers[i];
+	}
+	return dInfo;
+}
 
-// Called when we have a connection to initialize the data
-// for all the various modules. This should never be called
-// by the user, so we don't expose it.
-var initialize = function (instance) {
-  var sessionData = yaml.load(instance.getSessionYAML());
-  iRacing.SessionManager.load(iRacing, sessionData);
-  iRacing.CarManager.load(iRacing, sessionData);
-};
-
-// Execute a callback once we are connected
-iRacing.ready = function (cb) {
-  var ir = new iRacing();
-
-  setTimeout(function () {
-    while (true) {
-      if (this.waitForDataReady(iRacing.TIMEOUT)) {
-        initialize(ir);
-        return cb.call(this);
-      }
-    }
-  }.bind(ir), 0);
-};
-
-// Execute a callback for every data tick
-iRacing.prototype.onTick = function (cb) {
-  setTimeout(function () {
-    var result = true;
-
-    while(true) {
-      if (this.waitForDataReady(iRacing.TIMEOUT)) {
-        result = cb.call(this);
-        if (result === false) return;
-      }
-    }
-  }.bind(this), 0);
-};
-
-// Export our iRacing object
-exports.iRacing = iRacing;
+tick();
+tickInterval = setInterval(tick, TIMEOUT);
