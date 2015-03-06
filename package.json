@@ -11,10 +11,9 @@
   "main": "./src/index.js",
   "os": ["win32"],
   "dependencies": {
-    "js-yaml": ">= 1.0.3",
-    "coffee-script": "1.4.0"
+    "js-yaml": ">= 1.0.3"
   },
   "devDependencies": {
-    "node-gyp": "*"
+    "nw-gyp": "*"
   }
 }

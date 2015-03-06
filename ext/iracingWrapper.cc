@@ -4,7 +4,7 @@
 
 v8::Persistent<v8::Function> IRacingWrapper::constructor;
 
-IRacingWrapper::IRacingWrapper() {
+IRacingWrapper::IRacingWrapper() : data(NULL), dataLen(0){
 }
 
 IRacingWrapper::~IRacingWrapper() {
@@ -57,19 +57,19 @@ void IRacingWrapper::WaitForDataReady(const v8::FunctionCallbackInfo<v8::Value>&
 	
 	IRacingWrapper* obj = node::ObjectWrap::Unwrap<IRacingWrapper>(args.Holder());
 
-    bool result = irsdk_waitForDataReady(args[0]->Int32Value(), obj->data);
+    bool result = irsdk_waitForDataReady(args[0]->Int32Value(), NULL);
 
     if (result) {
       const irsdk_header *header = irsdk_getHeader();
 
-      if (!obj->data || obj->dataLen != header->bufLen) {
-        if (obj->data)
-          delete [] obj->data;
+       if (!obj->data || obj->dataLen != header->bufLen) {
+         if (obj->data)
+           delete [] obj->data;
 
-        obj->dataLen = header->bufLen;
-        obj->data = new char[obj->dataLen];
+         obj->dataLen = header->bufLen;
+         obj->data = new char[obj->dataLen];
 
-        irsdk_waitForDataReady(args[0]->Int32Value(), obj->data);  
+         irsdk_waitForDataReady(args[0]->Int32Value(), obj->data);  
       }
     }
 
